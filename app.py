@@ -16,7 +16,7 @@ from selenium.webdriver.common.by import By
 from time import sleep
 from selenium.webdriver.common.keys import Keys
 from openpyxl import Workbook
-
+import json
 
 #funcao buscar credenciais
 def read_credentials(file_path):
@@ -74,33 +74,48 @@ links = []
 
 for _ in range(25):
     scroll_list(200)
-    links = browser.find_elements(By.XPATH,"//main//div/div//ul//li//a[@data-control-id]")
+    link_elements = browser.find_elements(By.XPATH, "//main//div/div//ul//li//a[@data-control-id]")
+    
+    for link in link_elements:
+        job_data = {
+            "url": link.get_attribute("href"),
+            "titulo": link.text  # Isso coleta o texto visível do link (caso haja)
+        }
+        links.append(job_data)
+    
     print(len(links))
-    if len(links) >=25:
+    if len(links) >= 25:
         print(f"Chegamos ao numero esperado de {len(links)}")
         break
 
-#vamos criar nossa planilha
-spreadsheet = Workbook()
+# Salvar os links organizados em um arquivo JSON
+with open("job_links.json", "w") as json_file:
+    json.dump(links, json_file, indent=4, ensure_ascii=False)
 
-sheet = spreadsheet.active
+print("Links organizados salvos em job_links.json")
 
-sheet['A1'] = "NOME DA VAGA"
-sheet['B1'] = "LINK DA VAGA"
 
-next_line = sheet.max_row + 1
+# #vamos criar nossa planilha
+# spreadsheet = Workbook()
 
-for link in links:
-    text = link.text
-    url_link = link.get_attribute("href")
+# sheet = spreadsheet.active
 
-    sheet[f'A{next_line}'] = text
-    sheet[f'B{next_line}'] = url_link
+# sheet['A1'] = "NOME DA VAGA"
+# sheet['B1'] = "LINK DA VAGA"
 
-    next_line+= 1
+# next_line = sheet.max_row + 1
 
-spreadsheet.save("vagas_links"+search+".xlsx")
-print("planilha criada")
-print("Encerrando busca")
-sleep
+# for link in links:
+#     text = link.text
+#     url_link = link.get_attribute("href")
+
+#     sheet[f'A{next_line}'] = text
+#     sheet[f'B{next_line}'] = url_link
+
+#     next_line+= 1
+
+# spreadsheet.save("vagas_links"+search+".xlsx")
+# print("planilha criada")
+# print("Encerrando busca")
+# sleep
 browser.quit()
