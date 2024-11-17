@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Busca de Vagas - LinkedIn</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Busca de Vagas no LinkedIn</h1>
+        <form id="searchForm">
+            <label for="user">Usuário:</label>
+            <input type="text" id="user" name="user" required>
+
+            <label for="senha">Senha:</label>
+            <input type="password" id="senha" name="senha" required>
+
+            <label for="search">Busca:</label>
+            <input type="text" id="search" name="search" required>
+
+            <button type="submit">Buscar</button>
+        </form>
+        <div id="results">
+            <h2>Resultados:</h2>
+            <ul id="jobList"></ul>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

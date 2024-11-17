@@ -11,88 +11,86 @@
 #INTALAR-PACOTES
 
 #REALIZAR-O-PASSO-A-PASSO-ALGORITMO
+from flask import Flask, render_template, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from time import sleep
 from selenium.webdriver.common.keys import Keys
-from openpyxl import Workbook
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from time import sleep
 import json
 
-#funcao buscar credenciais
-def read_credentials(file_path):
-    with open(file_path,"r") as file:
-        lines = file.readlines()
+app = Flask(__name__)
 
-        credentials ={}
-        for line in lines:
-            key, value = line.strip().split(":")
-            credentials[key] = value
-        return credentials
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-file_path_credentials = "credentials.txt"
+@app.route('/search', methods=['POST'])
+def search():
+    data = request.json
+    user = data['user']
+    senha = data['senha']
+    search_query = data['search']
 
-credentials = read_credentials(file_path_credentials)
+    # Configurar o navegador com webdriver-manager
+    service = Service(ChromeDriverManager().install())
+    options = webdriver.ChromeOptions()
+    browser = webdriver.Chrome(service=service, options=options)
 
-
-print("Vamos comecar a buscar suas vagas")
-search = input("Digite sua Busca: ")
-
-
-#iniciar-a-navegacao
-browser = webdriver.Chrome()
-browser.get("https://www.linkedin.com/")
-sleep(2)
-
-login = browser.find_element(By.XPATH,"/html/body/main/section[1]/div/div/a")
-login.click()
-sleep(2)
-email = browser.find_element(By.ID,"username")
-password = browser.find_element(By.ID,"password")
-btn_enter = browser.find_element(By.XPATH,"/html/body/div/main/div[2]/div[1]/form/div[4]/button")
-sleep(2)
-email.send_keys(credentials['user'])
-password.send_keys(credentials['senha'])
-sleep(2)
-btn_enter.click()
-sleep(5)
-browser.get("https://www.linkedin.com/jobs")
-input_jobs_search = browser.find_element(By.XPATH,"//header//input")
-sleep(5)
-input_jobs_search.send_keys(search)
-sleep(5)
-input_jobs_search.send_keys(Keys.ENTER)
-sleep(5)
-ul_element = browser.find_element(By.CSS_SELECTOR,"main div.jobs-search-results-list")
-sleep(5)
-
-
-def scroll_list(pixels):
-    browser.execute_script(f"arguments[0].scrollTop+={pixels};",ul_element)
+    # Acessar o LinkedIn e fazer login
+    browser.get("https://www.linkedin.com/")
     sleep(2)
+    login = browser.find_element(By.XPATH, "/html/body/main/section[1]/div/div/a")
+    login.click()
+    sleep(2)
+    email = browser.find_element(By.ID, "username")
+    password = browser.find_element(By.ID, "password")
+    btn_enter = browser.find_element(By.XPATH, "/html/body/div/main/div[2]/div[1]/form/div[4]/button")
+    email.send_keys(user)
+    password.send_keys(senha)
+    btn_enter.click()
+    sleep(5)
 
-links = []
+    # Buscar vagas
+    browser.get("https://www.linkedin.com/jobs")
+    wait = WebDriverWait(browser, 10)  # Espera até 10 segundos
+    input_jobs_search = wait.until(
+    EC.presence_of_element_located((By.XPATH, "/html/body/div[6]/header/div/div/div/div[2]/div[2]/div/div/input[1]")))
+    input_jobs_search.send_keys(search_query)
+    input_jobs_search.send_keys(Keys.ENTER)
 
-for _ in range(25):
-    scroll_list(200)
-    link_elements = browser.find_elements(By.XPATH, "//main//div/div//ul//li//a[@data-control-id]")
-    
-    for link in link_elements:
-        job_data = {
-            "url": link.get_attribute("href"),
-            "titulo": link.text  # Isso coleta o texto visível do link (caso haja)
-        }
-        links.append(job_data)
-    
-    print(len(links))
-    if len(links) >= 25:
-        print(f"Chegamos ao numero esperado de {len(links)}")
-        break
+    wait = WebDriverWait(browser, 10)
+    ul_element = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul.jobs-search-results-list")))
 
-# Salvar os links organizados em um arquivo JSON
-with open("job_links.json", "w") as json_file:
-    json.dump(links, json_file, indent=4, ensure_ascii=False)
+    # Função para rolar a lista de vagas
+    def scroll_list(pixels):
+        browser.execute_script(f"arguments[0].scrollTop+={pixels};", ul_element)
+        sleep(2)
 
-print("Links organizados salvos em job_links.json")
+    links = []
+    for _ in range(25):
+        scroll_list(200)
+        link_elements = browser.find_elements(By.XPATH, "//main//div/div//ul//li//a[@data-control-id]")
+        for link in link_elements:
+            job_data = {
+                "url": link.get_attribute("href"),
+                "titulo": link.text
+            }
+            links.append(job_data)
+        if len(links) >= 25:
+            break
+
+    browser.quit()
+
+    return jsonify(links)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
 
 
 # #vamos criar nossa planilha
@@ -118,4 +116,3 @@ print("Links organizados salvos em job_links.json")
 # print("planilha criada")
 # print("Encerrando busca")
 # sleep
-browser.quit()
